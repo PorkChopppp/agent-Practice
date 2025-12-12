@@ -1,28 +1,31 @@
-# AI研究助手
+# AI研究助手 (AI Research Assistant)
 
-这是一个基于AI的自动化研究助手，能够根据给定主题进行研究并生成结构化报告。
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 功能特性
+这是一个基于AI的自动化研究助手，能够根据给定主题进行研究并生成结构化报告。该项目集成了多种先进技术，包括向量数据库、大语言模型和微服务架构。
 
-- 自动研究指定主题
-- 生成结构化的研究报告
-- 使用向量数据库(Milvus)存储和检索信息
-- 使用关系数据库(PostgreSQL)存储最终报告
-- 支持OpenAI GPT模型生成内容
-- 提供Web界面方便用户交互
-- 支持FastAPI和Flask两种Web框架实现
+## 🌟 功能特性
 
-## 技术栈
+- 🔍 **自动研究指定主题** - 根据用户输入的主题自动收集相关信息
+- 📝 **生成结构化研究报告** - 使用大语言模型生成专业的研究报告
+- 🗃️ **向量数据库支持** - 集成 Milvus 向量数据库进行高效相似性搜索
+- 💾 **关系数据库存储** - 使用 PostgreSQL 存储最终报告和元数据
+- 🤖 **双AI代理架构** - 研究员代理和作家代理协同工作
+- 🌐 **双Web框架支持** - 同时支持 Flask 和 FastAPI 两种 Web 框架
+- ⚡ **异步处理** - 支持后台任务处理，提高用户体验
 
-- Python 3.8+
-- LangChain - 构建AI应用的框架
-- OpenAI API - 大语言模型和嵌入模型
-- Milvus - 向量数据库，用于相似性搜索
-- PostgreSQL - 关系数据库，用于存储结构化数据
-- Docker - 容器化部署
-- Flask/FastAPI - Web应用框架
+## 🛠 技术栈
 
-## 系统架构
+- **语言**: Python 3.8+
+- **AI框架**: LangChain, LangGraph
+- **大语言模型**: OpenAI GPT, SiliconFlow 兼容模型
+- **向量数据库**: Milvus
+- **关系数据库**: PostgreSQL
+- **容器化**: Docker
+- **Web框架**: Flask/FastAPI
+- **前端**: HTML, CSS, JavaScript
+
+## 🏗 系统架构
 
 ```
 +------------------+     +------------------+     +------------------+
@@ -38,7 +41,7 @@
 +------------------+     +------------------+     +------------------+
 ```
 
-## 项目目录结构
+## 📁 项目目录结构
 
 ```
 ai-research-assistant/
@@ -78,13 +81,13 @@ ai-research-assistant/
 └── README.md                   # 项目说明文档
 ```
 
-## 安装和配置
+## 🚀 快速开始
 
 ### 1. 克隆项目
 
 ```bash
-git clone <repository-url>
-cd ai-research-assistant
+git clone https://github.com/PorkChopppp/agent-Practice.git
+cd agent-Practice
 ```
 
 ### 2. 创建虚拟环境并安装依赖
@@ -125,7 +128,7 @@ POSTGRES_USER=admin
 POSTGRES_PASSWORD=admin
 ```
 
-## 启动数据库服务
+## 🐳 启动数据库服务
 
 使用Docker启动Milvus和PostgreSQL：
 
@@ -142,7 +145,7 @@ docker run -d --name postgres_research \
   postgres:15
 ```
 
-## 使用方法
+## ▶ 使用方法
 
 ### 命令行方式
 
@@ -178,7 +181,7 @@ uvicorn app_fastapi:app --host 0.0.0.0 --port 8000 --reload
 
 然后在浏览器中访问 `http://localhost:5000` (Flask) 或 `http://localhost:8000` (FastAPI)，通过图形界面输入研究主题并查看生成的报告。
 
-## 故障排除
+##  troubleshoot 故障排除
 
 ### 地区限制问题
 
@@ -210,6 +213,16 @@ Error code: 403 - {'error': {'code': 'unsupported_country_region_territory', 'me
 
 如果Milvus连接失败，程序会自动切换到本地文件存储模式，不会影响基本功能。
 
-## 许可证
+## 🤝 贡献
+
+欢迎任何形式的贡献！如果您有任何建议或发现了bug，请创建 Issue 或提交 Pull Request。
+
+## 📄 许可证
 
 本项目采用MIT许可证 - 查看 [LICENSE](file:///D:/PythonProject3/LICENSE) 文件了解详情。
+
+## 🙏 致谢
+
+- 感谢 OpenAI 提供强大的语言模型
+- 感谢 Milvus 提供高效的向量数据库
+- 感谢 LangChain 和 LangGraph 提供AI应用开发框架
