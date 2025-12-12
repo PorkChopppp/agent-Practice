@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI研究助手</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            transition: background-color 0.3s;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: #ecf0f1;
+            display: none;
+        }
+        .result h2 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .status {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        .error {
+            color: #e74c3c;
+            background-color: #fadbd8;
+        }
+        .success {
+            color: #27ae60;
+            background-color: #d5f5e3;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            overflow-x: auto;
+        }
+        .report-content {
+            line-height: 1.6;
+        }
+        .report-content h1, .report-content h2, .report-content h3 {
+            color: #2c3e50;
+        }
+        .report-content ul, .report-content ol {
+            padding-left: 20px;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* 对话相关样式 */
+        .chat-container {
+            margin-top: 30px;
+            border-top: 1px solid #bdc3c7;
+            padding-top: 20px;
+        }
+        .chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #fff;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background-color: #3498db;
+            color: white;
+            text-align: right;
+        }
+        .ai-message {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+        }
+        .chat-input {
+            display: flex;
+        }
+        .chat-input input {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI研究助手</h1>
+        
+        <!-- 研究报告生成部分 -->
+        <div class="input-group">
+            <label for="topic">请输入研究主题：</label>
+            <input type="text" id="topic" placeholder="例如：人工智能发展趋势、机器学习应用等">
+        </div>
+        <button id="generate-btn">生成研究报告</button>
+        
+        <div id="status" class="status" style="display: none;">
+            <span class="loading"></span>
+            <span id="status-text">正在处理中...</span>
+        </div>
+        
+        <div id="result" class="result">
+            <h2>研究报告</h2>
+            <div id="report-content" class="report-content"></div>
+        </div>
+        
+        <!-- 多轮对话部分 -->
+        <div class="chat-container">
+            <h2>多轮对话</h2>
+            <div id="chat-messages" class="chat-messages">
+                <div class="message ai-message">
+                    您好！我是AI研究助手，您可以询问我任何问题，或者让我帮您生成研究报告。
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="chat-input" placeholder="输入您的消息...">
+                <button id="send-btn">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 研究报告生成功能
+        document.getElementById('generate-btn').addEventListener('click', generateReport);
+        
+        async function generateReport() {
+            const topic = document.getElementById('topic').value.trim();
+            const button = document.getElementById('generate-btn');
+            const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('status-text');
+            const resultDiv = document.getElementById('result');
+            const reportContent = document.getElementById('report-content');
+            
+            if (!topic) {
+                alert('请输入研究主题');
+                return;
+            }
+            
+            // 禁用按钮并显示状态
+            button.disabled = true;
+            button.textContent = '生成中...';
+            statusDiv.style.display = 'block';
+            statusText.textContent = '正在处理中...';
+            resultDiv.style.display = 'none';
+            
+            try {
+                // 请求生成报告
+                const response = await fetch('/generate_report', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({topic: topic})
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 轮询报告状态
+                    await pollReportStatus(data.report_id);
+                } else {
+                    showError(data.error || '生成报告时发生错误');
+                }
+            } catch (error) {
+                showError('网络错误：' + error.message);
+            } finally {
+                // 恢复按钮状态
+                button.disabled = false;
+                button.textContent = '生成研究报告';
+            }
+        }
+        
+        async function pollReportStatus(reportId) {
+            const statusText = document.getElementById('status-text');
+            const resultDiv = document.getElementById('result');
+            const reportContent = document.getElementById('report-content');
+            
+            while (true) {
+                try {
+                    const response = await fetch(`/report_status/${reportId}`);
+                    const data = await response.json();
+                    
+                    if (data.status === 'completed') {
+                        // 显示报告内容
+                        document.getElementById('status').style.display = 'none';
+                        reportContent.innerHTML = '<pre>' + data.data.content + '</pre>';
+                        resultDiv.style.display = 'block';
+                        break;
+                    } else if (data.status === 'error') {
+                        showError(data.error || '生成报告时发生错误');
+                        break;
+                    } else {
+                        // 继续等待
+                        statusText.textContent = '正在生成报告...';
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                } catch (error) {
+                    showError('网络错误：' + error.message);
+                    break;
+                }
+            }
+        }
+        
+        function showError(message) {
+            document.getElementById('status').style.display = 'none';
+            const resultDiv = document.getElementById('result');
+            const reportContent = document.getElementById('report-content');
+            reportContent.innerHTML = `<p class="error">错误：${message}</p>`;
+            resultDiv.style.display = 'block';
+        }
+        
+        // 多轮对话功能
+        let conversationId = null;
+        
+        document.getElementById('send-btn').addEventListener('click', sendMessage);
+        document.getElementById('chat-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            
+            if (!message) {
+                return;
+            }
+            
+            // 显示用户消息
+            addMessageToChat('user', message);
+            input.value = '';
+            
+            try {
+                // 发送消息到后端
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        conversation_id: conversationId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 更新对话ID
+                    conversationId = data.conversation_id;
+                    
+                    // 显示AI回复
+                    addMessageToChat('assistant', data.message);
+                } else {
+                    addMessageToChat('assistant', '错误：' + (data.error || '未知错误'));
+                }
+            } catch (error) {
+                addMessageToChat('assistant', '网络错误：' + error.message);
+            }
+        }
+        
+        function addMessageToChat(role, content) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            
+            if (role === 'user') {
+                messageDiv.textContent = content;
+            } else {
+                // 对于AI消息，保留换行格式
+                messageDiv.innerHTML = content.replace(/\n/g, '<br>');
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    </script>
+</body>
+</html>

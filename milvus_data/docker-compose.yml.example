@@ -1,0 +1,159 @@
+# =============================================================================
+# Docker Compose 配置文件 - Milvus 单机版部署配置
+# =============================================================================
+
+# ----------------------------------------------------------------------------
+# Docker Compose 版本声明
+# 指定使用 3.5 版本的 compose 文件格式
+# ----------------------------------------------------------------------------
+version: '3.5'
+
+# ----------------------------------------------------------------------------
+# 服务定义部分
+# 包含所有需要运行的容器服务
+# ----------------------------------------------------------------------------
+services:
+
+  # ..........................................................................
+  # Etcd 服务 - Milvus 使用 Etcd 作为元数据存储
+  # ..........................................................................
+  etcd:
+    # 指定容器名称，使得容器具有固定的名称而非自动生成
+    container_name: milvus-etcd
+    
+    # 指定要使用的镜像及其版本
+    image: quay.io/coreos/etcd:v3.5.5
+    
+    # 设置环境变量配置 Etcd 的行为
+    environment:
+      # 自动压缩模式设置为 revision 模式（基于版本号的压缩）
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      # 保留的修订版本数量为 1000 个
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      # 设置后端存储配额为 4GB (4294967296 bytes)
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      # 设置快照计数为 50000，达到此事务数时触发快照
+      - ETCD_SNAPSHOT_COUNT=50000
+      
+    # 数据卷挂载，将主机目录映射到容器内用于持久化存储
+    # 使用 DOCKER_VOLUME_DIRECTORY 环境变量或默认当前目录下的 volumes/etcd 映射到容器内的 /etcd 目录
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/etcd:/etcd
+      
+    # 覆盖容器启动时的默认命令，指定 Etcd 的运行参数
+    # 包括客户端 URL 广播地址和监听地址以及数据存储目录
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    
+    # 健康检查配置，定期检查服务是否正常运行
+    healthcheck:
+      # 执行 etcdctl endpoint health 命令检查健康状态
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      # 检查间隔为 30 秒
+      interval: 30s
+      # 超时时间为 20 秒
+      timeout: 20s
+      # 重试次数为 3 次
+      retries: 3
+
+  # ..........................................................................
+  # MinIO 服务 - Milvus 使用 MinIO（或 S3）作为对象存储引擎来存储向量数据
+  # ..........................................................................
+  minio:
+    # 指定容器名称
+    container_name: milvus-minio
+    
+    # 指定 MinIO 镜像及版本
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    
+    # 设置 MinIO 的访问密钥和秘密密钥（默认为 admin/admin）
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      
+    # 端口映射，将主机端口映射到容器端口
+    # 9000 是 MinIO API 服务端口，9001 是 MinIO 控制台端口
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+      
+    # 数据卷挂载，将主机目录映射到容器内用于持久化存储 MinIO 数据
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio:/minio_data
+      
+    # 覆盖容器启动时的默认命令，启动 MinIO 服务并指定控制台地址
+    command: minio server /minio_data --console-address ":9001"
+    
+    # 健康检查配置
+    healthcheck:
+      # 通过 curl 命令检查 MinIO 健康状态接口
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      # 检查间隔为 30 秒
+      interval: 30s
+      # 超时时间为 20 秒
+      timeout: 20s
+      # 重试次数为 3 次
+      retries: 3
+
+  # ..........................................................................
+  # Milvus Standalone 服务 - 运行单机版 Milvus
+  # ..........................................................................
+  standalone:
+    # 指定容器名称
+    container_name: milvus-standalone
+    
+    # 指定 Milvus 镜像及版本
+    image: milvusdb/milvus:v2.4.9
+    
+    # 覆盖容器启动时的默认命令，运行 Milvus 单机模式
+    command: ["milvus", "run", "standalone"]
+    
+    # 安全选项配置
+    security_opt:
+      # 关闭 seccomp 安全配置文件限制（seccomp 是 Linux 内核安全特性）
+      - seccomp:unconfined
+      
+    # 环境变量配置，指定依赖服务的地址
+    environment:
+      # 指定 Etcd 服务地址，供 Milvus 存储元数据
+      ETCD_ENDPOINTS: etcd:2379
+      # 指定 MinIO 服务地址，供 Milvus 存储向量数据
+      MINIO_ADDRESS: minio:9000
+      
+    # 数据卷挂载，将主机目录映射到容器内用于持久化存储 Milvus 数据
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/milvus:/var/lib/milvus
+      
+    # 健康检查配置
+    healthcheck:
+      # 通过 curl 命令检查 Milvus 健康状态接口
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      # 检查间隔为 30 秒
+      interval: 30s
+      # 启动后等待 90 秒再开始健康检查（因为初始化可能需要时间）
+      start_period: 90s
+      # 超时时间为 20 秒
+      timeout: 20s
+      # 重试次数为 3 次
+      retries: 3
+      
+    # 端口映射，将主机端口映射到容器端口
+    # 19530 是 Milvus gRPC 服务端口，9091 是 Milvus RESTful 服务和健康检查端口
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+      
+    # 依赖关系定义，确保在启动 Milvus 之前先启动这些服务
+    depends_on:
+      # 依赖 Etcd 服务
+      - "etcd"
+      # 依赖 MinIO 服务
+      - "minio"
+
+# ----------------------------------------------------------------------------
+# 网络配置部分
+# ----------------------------------------------------------------------------
+networks:
+  # 默认网络配置
+  default:
+    # 指定网络名称为 milvus，所有服务都会连接到这个网络以便相互通信
+    name: milvus
