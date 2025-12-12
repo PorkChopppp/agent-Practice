@@ -3,6 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ~~这是一个基于AI的自动化研究助手，能够根据给定主题进行研究并生成结构化报告。该项目集成了多种先进技术，包括向量数据库、大语言模型和微服务架构。~~
+
 ###孩子们不是这样的，除了这句话全是ai写的，上传也是ai传的，用的东西是一堆的，作用是没有的
 
 ## 🌟 功能特性
