@@ -179,3 +179,10 @@ milvus_data/volumes/
 
 # Tiktoken 缓存
 tiktoken_cache/
+
+# GitHub Actions
+.github/workflows/
+
+# 编辑器备份文件
+*~
+.swp
