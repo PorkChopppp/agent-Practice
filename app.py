@@ -1,10 +1,15 @@
 from flask import Flask, render_template, request, jsonify
 from workflows.research_workflow import ResearchWorkflow
+from agents.orchestrator_agent import OrchestratorAgent
+from routes.feishu_routes import feishu_bp
 import threading
 import queue
 import uuid
 
 app = Flask(__name__)
+
+# 注册蓝图
+app.register_blueprint(feishu_bp, url_prefix='/api')
 
 # 存储报告结果的字典
 reports = {}
@@ -13,27 +18,31 @@ reports = {}
 conversations = {}
 
 class ReportGenerator(threading.Thread):
-    def __init__(self, topic, report_id):
+    def __init__(self, topic, report_id, mode="simple", depth="basic"):
         threading.Thread.__init__(self)
         self.topic = topic
         self.report_id = report_id
+        self.mode = mode
+        self.depth = depth
         
     def run(self):
         try:
-            # 创建研究工作流实例
-            workflow = ResearchWorkflow()
-            
-            # 运行研究流程
-            report = workflow.run_research_process(self.topic)
+            if self.mode == "orchestrator":
+                # 使用协调者代理模式
+                orchestrator = OrchestratorAgent()
+                report = orchestrator.execute_research_task(self.topic, self.depth)
+                orchestrator.close()
+            else:
+                # 使用默认研究工作流
+                workflow = ResearchWorkflow()
+                report = workflow.run_research_process(self.topic)
+                workflow.close()
             
             # 保存报告结果
             reports[self.report_id] = {
                 'status': 'completed',
                 'data': report
             }
-            
-            # 关闭连接
-            workflow.close()
         except Exception as e:
             reports[self.report_id] = {
                 'status': 'error',
@@ -48,6 +57,8 @@ def index():
 def generate_report():
     data = request.get_json()
     topic = data.get('topic', '')
+    mode = data.get('mode', 'simple')
+    depth = data.get('depth', 'basic')
     
     if not topic:
         return jsonify({'error': '请输入研究主题'}), 400
@@ -62,7 +73,7 @@ def generate_report():
     }
     
     # 启动后台线程生成报告
-    generator = ReportGenerator(topic, report_id)
+    generator = ReportGenerator(topic, report_id, mode, depth)
     generator.start()
     
     return jsonify({'report_id': report_id})
@@ -132,6 +143,40 @@ def get_conversation(conversation_id):
         })
     else:
         return jsonify({'error': '对话不存在'}), 404
+
+# 知识库查询接口
+@app.route('/query_knowledge', methods=['POST'])
+def query_knowledge():
+    data = request.get_json()
+    query = data.get('query', '')
+    limit = data.get('limit', 5)
+    
+    if not query:
+        return jsonify({'error': '请输入查询内容'}), 400
+    
+    try:
+        orchestrator = OrchestratorAgent()
+        results = orchestrator.query_knowledge_base(query, limit)
+        orchestrator.close()
+        
+        return jsonify({
+            'query': query,
+            'results': results
+        })
+    except Exception as e:
+        return jsonify({'error': f'查询知识库时出错: {str(e)}'}), 500
+
+# 系统状态接口
+@app.route('/system_status')
+def system_status():
+    try:
+        orchestrator = OrchestratorAgent()
+        status = orchestrator.get_system_status()
+        orchestrator.close()
+        
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({'error': f'获取系统状态时出错: {str(e)}'}), 500
 
 '''
 #=============================================================================

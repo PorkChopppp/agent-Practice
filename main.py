@@ -8,8 +8,10 @@ AI研究助手主程序
 完整的工作流程，实现从研究主题到研究报告的自动化生成。
 """
 
-from workflows.research_workflow import ResearchWorkflow
+from workflows.research_workflow import ResearchWorkflow, create_graph_workflow
+from agents.orchestrator_agent import OrchestratorAgent
 import sys
+import argparse
 
 def main():
     """
@@ -22,39 +24,83 @@ def main():
     4. 显示生成的报告
     5. 清理资源
     """
-    # 创建研究工作流实例
-    try:
-        # 初始化研究工作流，包括研究人员代理和写作代理
-        workflow = ResearchWorkflow()
-    except Exception as e:
-        # 工作流初始化失败时的错误处理
-        print(f"无法初始化工作流: {e}")
-        print("请检查配置和依赖项是否正确安装")
-        return
+    # 创建命令行参数解析器
+    parser = argparse.ArgumentParser(description="AI研究助手")
+    parser.add_argument("topic", nargs="?", default="人工智能", help="研究主题")
+    parser.add_argument("--mode", choices=["simple", "workflow", "orchestrator"], 
+                       default="simple", help="执行模式")
+    parser.add_argument("--depth", choices=["basic", "intermediate", "deep"], 
+                       default="basic", help="研究深度")
     
-    # 获取研究主题
-    # 支持从命令行参数传入研究主题，如果没有提供则使用默认主题
-    if len(sys.argv) > 1:
-        # 如果提供了命令行参数，则将其作为研究主题
-        topic = " ".join(sys.argv[1:])
-    else:
-        # 如果没有提供命令行参数，则使用默认主题"人工智能"
-        topic = "人工智能"
+    args = parser.parse_args()
+    topic = args.topic
     
     try:
-        # 运行研究流程
-        # 这将依次执行研究和写作两个阶段
-        report = workflow.run_research_process(topic)
+        if args.mode == "workflow":
+            # 使用LangGraph工作流模式
+            print("使用LangGraph工作流模式...")
+            workflow = create_graph_workflow()
+            result = workflow.invoke({"topic": topic})
+            print("工作流执行完成")
+        elif args.mode == "orchestrator":
+            # 使用协调者代理模式
+            print("使用协调者代理模式...")
+            orchestrator = OrchestratorAgent()
+            result = orchestrator.execute_research_task(topic, args.depth)
+            orchestrator.close()
+        else:
+            # 使用简单模式
+            print("使用简单模式...")
+            # 创建研究工作流实例
+            workflow = ResearchWorkflow()
+            
+            # 运行研究流程
+            # 这将依次执行研究和写作两个阶段
+            result = workflow.run_research_process(topic)
+            
+            # 关闭所有连接，确保资源得到正确释放
+            workflow.close()
         
         # 显示生成的研究报告
         # 使用格式化输出使报告更易读
         print("\n" + "="*50)
         print("生成的研究报告:")
         print("="*50)
-        print(f"主题: {report['topic']}")      # 显示报告主题
-        print(f"报告ID: {report['report_id']}")  # 显示报告ID
-        print("-"*50)
-        print(report['content'])              # 显示报告内容
+        
+        if isinstance(result, dict):
+            print(f"主题: {result.get('topic', topic)}")      # 显示报告主题
+            print(f"报告ID: {result.get('report_id', 'N/A')}")  # 显示报告ID
+            print("-"*50)
+            print(result.get('content', '无内容'))
+            
+            # 显示评审结果
+            if 'review' in result:
+                review = result['review']
+                print("\n" + "-"*30)
+                print("报告评审结果:")
+                print("-"*30)
+                print(f"质量评分: {review.get('quality_score', 'N/A')}/100")
+                print(f"综合评估: {review.get('overall_assessment', 'N/A')}")
+                if review.get('feedback'):
+                    print("反馈意见:")
+                    for feedback in review['feedback']:
+                        print(f"  - {feedback}")
+                if review.get('suggestions'):
+                    print("改进建议:")
+                    for suggestion in review['suggestions']:
+                        print(f"  - {suggestion}")
+            
+            # 显示知识库统计
+            if 'knowledge_stats' in result:
+                stats = result['knowledge_stats']
+                print("\n" + "-"*30)
+                print("知识库统计:")
+                print("-"*30)
+                print(f"总知识条目: {stats.get('total_knowledge', 'N/A')}")
+                print(f"数据来源: {', '.join(stats.get('sources', []))}")
+        else:
+            print(result)
+            
         print("="*50)
         
     except Exception as e:
@@ -64,7 +110,8 @@ def main():
     finally:
         # 关闭所有连接，确保资源得到正确释放
         try:
-            workflow.close()
+            if 'workflow' in locals():
+                workflow.close()
         except:
             pass
 

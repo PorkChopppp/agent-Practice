@@ -32,7 +32,7 @@
             font-weight: bold;
             color: #34495e;
         }
-        input[type="text"] {
+        input[type="text"], select {
             width: 100%;
             padding: 12px;
             border: 2px solid #bdc3c7;
@@ -153,6 +153,20 @@
             flex-grow: 1;
             margin-right: 10px;
         }
+        /* 知识库查询样式 */
+        .knowledge-query {
+            margin-top: 30px;
+            border-top: 1px solid #bdc3c7;
+            padding-top: 20px;
+        }
+        .advanced-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .advanced-options > div {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -164,6 +178,27 @@
             <label for="topic">请输入研究主题：</label>
             <input type="text" id="topic" placeholder="例如：人工智能发展趋势、机器学习应用等">
         </div>
+        
+        <!-- 高级选项 -->
+        <div class="advanced-options">
+            <div>
+                <label for="mode">执行模式:</label>
+                <select id="mode">
+                    <option value="simple">简单模式</option>
+                    <option value="workflow">工作流模式</option>
+                    <option value="orchestrator">协调者模式</option>
+                </select>
+            </div>
+            <div>
+                <label for="depth">研究深度:</label>
+                <select id="depth">
+                    <option value="basic">基础</option>
+                    <option value="intermediate">中等</option>
+                    <option value="deep">深入</option>
+                </select>
+            </div>
+        </div>
+        
         <button id="generate-btn">生成研究报告</button>
         
         <div id="status" class="status" style="display: none;">
@@ -174,6 +209,17 @@
         <div id="result" class="result">
             <h2>研究报告</h2>
             <div id="report-content" class="report-content"></div>
+        </div>
+        
+        <!-- 知识库查询部分 -->
+        <div class="knowledge-query">
+            <h2>知识库查询</h2>
+            <div class="input-group">
+                <label for="knowledge-query">请输入查询内容：</label>
+                <input type="text" id="knowledge-query" placeholder="例如：人工智能相关知识">
+            </div>
+            <button id="query-knowledge-btn">查询知识库</button>
+            <div id="knowledge-results"></div>
         </div>
         
         <!-- 多轮对话部分 -->
@@ -197,6 +243,8 @@
         
         async function generateReport() {
             const topic = document.getElementById('topic').value.trim();
+            const mode = document.getElementById('mode').value;
+            const depth = document.getElementById('depth').value;
             const button = document.getElementById('generate-btn');
             const statusDiv = document.getElementById('status');
             const statusText = document.getElementById('status-text');
@@ -222,7 +270,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({topic: topic})
+                    body: JSON.stringify({topic: topic, mode: mode, depth: depth})
                 });
                 
                 const data = await response.json();
@@ -255,7 +303,38 @@
                     if (data.status === 'completed') {
                         // 显示报告内容
                         document.getElementById('status').style.display = 'none';
-                        reportContent.innerHTML = '<pre>' + data.data.content + '</pre>';
+                        
+                        // 格式化显示报告内容和评审结果
+                        let contentHtml = '<pre>' + data.data.content + '</pre>';
+                        
+                        // 如果有评审结果，也显示出来
+                        if (data.data.review) {
+                            const review = data.data.review;
+                            contentHtml += `
+                                <hr>
+                                <h3>报告评审结果</h3>
+                                <p><strong>质量评分:</strong> ${review.quality_score}/100</p>
+                                <p><strong>综合评估:</strong> ${review.overall_assessment}</p>
+                            `;
+                            
+                            if (review.feedback && review.feedback.length > 0) {
+                                contentHtml += '<p><strong>反馈意见:</strong></p><ul>';
+                                review.feedback.forEach(feedback => {
+                                    contentHtml += `<li>${feedback}</li>`;
+                                });
+                                contentHtml += '</ul>';
+                            }
+                            
+                            if (review.suggestions && review.suggestions.length > 0) {
+                                contentHtml += '<p><strong>改进建议:</strong></p><ul>';
+                                review.suggestions.forEach(suggestion => {
+                                    contentHtml += `<li>${suggestion}</li>`;
+                                });
+                                contentHtml += '</ul>';
+                            }
+                        }
+                        
+                        reportContent.innerHTML = contentHtml;
                         resultDiv.style.display = 'block';
                         break;
                     } else if (data.status === 'error') {
@@ -279,6 +358,62 @@
             const reportContent = document.getElementById('report-content');
             reportContent.innerHTML = `<p class="error">错误：${message}</p>`;
             resultDiv.style.display = 'block';
+        }
+        
+        // 知识库查询功能
+        document.getElementById('query-knowledge-btn').addEventListener('click', queryKnowledge);
+        
+        async function queryKnowledge() {
+            const query = document.getElementById('knowledge-query').value.trim();
+            const button = document.getElementById('query-knowledge-btn');
+            const resultsDiv = document.getElementById('knowledge-results');
+            
+            if (!query) {
+                alert('请输入查询内容');
+                return;
+            }
+            
+            button.disabled = true;
+            button.textContent = '查询中...';
+            resultsDiv.innerHTML = '<p>正在查询知识库...</p>';
+            
+            try {
+                const response = await fetch('/query_knowledge', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({query: query, limit: 5})
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.results && data.results.length > 0) {
+                        let html = '<h3>查询结果:</h3>';
+                        data.results.forEach((item, index) => {
+                            html += `
+                                <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                                    <p><strong>结果 ${index + 1}:</strong></p>
+                                    <p><strong>来源:</strong> ${item.source || '未知'}</p>
+                                    <p><strong>内容:</strong></p>
+                                    <pre style="white-space: pre-wrap;">${item.content}</pre>
+                                </div>
+                            `;
+                        });
+                        resultsDiv.innerHTML = html;
+                    } else {
+                        resultsDiv.innerHTML = '<p>未找到相关知识。</p>';
+                    }
+                } else {
+                    resultsDiv.innerHTML = `<p class="error">查询出错：${data.error}</p>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<p class="error">网络错误：${error.message}</p>`;
+            } finally {
+                button.disabled = false;
+                button.textContent = '查询知识库';
+            }
         }
         
         // 多轮对话功能

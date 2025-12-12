@@ -228,3 +228,14 @@ class PostgresClient:
                 self.connection.close()
             except:
                 pass
+
+    def get_connection(self):
+        """
+        获取数据库连接
+        
+        返回当前的数据库连接对象
+        
+        Returns:
+            connection: 数据库连接对象
+        """
+        return self.connection
