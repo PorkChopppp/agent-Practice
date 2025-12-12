@@ -10,6 +10,17 @@
 - 使用关系数据库(PostgreSQL)存储最终报告
 - 支持OpenAI GPT模型生成内容
 - 提供Web界面方便用户交互
+- 支持FastAPI和Flask两种Web框架实现
+
+## 技术栈
+
+- Python 3.8+
+- LangChain - 构建AI应用的框架
+- OpenAI API - 大语言模型和嵌入模型
+- Milvus - 向量数据库，用于相似性搜索
+- PostgreSQL - 关系数据库，用于存储结构化数据
+- Docker - 容器化部署
+- Flask/FastAPI - Web应用框架
 
 ## 系统架构
 
@@ -27,19 +38,7 @@
 +------------------+     +------------------+     +------------------+
 ```
 
-## 技术栈
-
-- Python 3.8+
-- LangChain - 构建AI应用的框架
-- OpenAI API - 大语言模型和嵌入模型
-- Milvus - 向量数据库，用于相似性搜索
-- PostgreSQL - 关系数据库，用于存储结构化数据
-- Docker - 容器化部署
-- Flask - Web应用框架
-
 ## 项目目录结构
-
-项目的详细目录结构请参阅 [PROJECT_STRUCTURE.md](file:///D:/PythonProject3/PROJECT_STRUCTURE.md) 文件。
 
 ```
 ai-research-assistant/
@@ -71,7 +70,8 @@ ai-research-assistant/
 │       └── init.sql            # PostgreSQL数据库初始化脚本
 ├── .env                        # 环境变量配置
 ├── .env.example                # 环境变量配置示例
-├── app.py                      # Web应用入口
+├── app.py                      # Flask Web应用入口
+├── app_fastapi.py              # FastAPI Web应用入口
 ├── main.py                     # 命令行程序入口
 ├── requirements.txt            # 项目依赖
 ├── PROJECT_STRUCTURE.md        # 项目结构详细说明
@@ -125,13 +125,13 @@ POSTGRES_USER=admin
 POSTGRES_PASSWORD=admin
 ```
 
-### 4. 启动数据库服务
+## 启动数据库服务
 
 使用Docker启动Milvus和PostgreSQL：
 
 ```bash
 # 启动Milvus
-docker run -d --name milvus-standalone -p 19530:19530 milvusdb/milvus:v2.4.9
+docker-compose -f milvus_data/docker-compose.yml up -d
 
 # 启动PostgreSQL
 docker run -d --name postgres_research \
@@ -162,13 +162,21 @@ python main.py "人工智能发展趋势"
 
 ### Web界面方式
 
-启动Web应用：
+项目支持两种Web框架实现：
+
+#### Flask版本
 
 ```bash
 python app.py
 ```
 
-然后在浏览器中访问 `http://localhost:5000`，通过图形界面输入研究主题并查看生成的报告。
+#### FastAPI版本
+
+```bash
+uvicorn app_fastapi:app --host 0.0.0.0 --port 8000 --reload
+```
+
+然后在浏览器中访问 `http://localhost:5000` (Flask) 或 `http://localhost:8000` (FastAPI)，通过图形界面输入研究主题并查看生成的报告。
 
 ## 故障排除
 
