@@ -186,3 +186,6 @@ tiktoken_cache/
 # 编辑器备份文件
 *~
 .swp
+
+# 个人简历相关文件
+PROJECT_SUMMARY_FOR_RESUME.md
